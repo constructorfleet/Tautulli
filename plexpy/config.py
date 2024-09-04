@@ -18,6 +18,7 @@ import re
 import shutil
 import time
 import threading
+import urllib.parse
 
 from configobj import ConfigObj, ParseError
 from hashing_passwords import make_hash
@@ -35,6 +36,76 @@ def bool_int(value):
         if value.lower() in ('', '0', 'false', 'f', 'no', 'n', 'off'):
             value = 0
     return int(bool(value))
+
+
+def custom_links(value):
+    """
+    Validates a dictionary of custom links.
+
+    ```python
+    [General]
+
+    [[CUSTOM_LINKS]]
+      [[[link_id]]]
+        friendly_name = Name            # Optional, friendly name of the link
+        text = My Link                  # Optional, text displayed next to icon
+        text_color = 002244             # Optional, RGB HEX color for text
+        icon = http://link-to-image.png # Required, Link to icon, SVG definition, raw base64
+        icon_color = ff0000             # Optional, RGB HEX color for icon
+        alt = Alt Text                  # Optional, alt-text for icon
+        href = http://my/link/dest      # Required, link url
+        active = 0                      # Required, flag to show/hide
+        location                        # Required, where the link should be displayed [nav, menu]
+    ```
+    """
+    rgb_hex_pattern = re.compile(r"^[a-fA-F0-9]{6}$")
+    required_keys = ["icon", "href", "enabled", "location"]
+    bool_int_keys = ["enabled"]
+    rgb_keys = ["text_color", "icon_color"]
+    optional_keys [*rgb_keys, "alt", "text", "friendly_name"]
+
+    def is_valid_url(url):
+        try:
+            urllib.parse.urlparse(url)
+            return True
+        except ValueError:
+            return False
+
+    def custom_link(link_spec):
+        result = {}
+        for k in required_keys:
+            if k not in link_spec:
+                return None
+            result[k] = link_spec[k]
+
+        if not is_valid_url(link_spec["href"]):
+            return None
+        
+        for k in optional_keys:
+            if k not in link_spec:
+                continue
+            if k in rgb_keys and not rgb_hex_pattern.match(link_spec[k]):
+                continue
+            if k in bool_int_keys:
+                result[k] = bool_int(link_spec[k])
+            else:
+                result[k] = link_spec[k]
+        
+        return result
+
+        
+    if not isinstance(value, dict):
+        return {}
+
+    links = {}
+    for link_id, link_spec in value.items():
+        links = {
+            **links,
+            **(custom_link(link_spec) or {})
+        }
+    return links
+
+
 
 
 FILENAME = "config.ini"
@@ -93,6 +164,7 @@ _CONFIG_DEFINITIONS = {
     'CLOUDINARY_API_KEY': (str, 'Cloudinary', ''),
     'CLOUDINARY_API_SECRET': (str, 'Cloudinary', ''),
     'CONFIG_VERSION': (int, 'Advanced', 0),
+    'CUSTOM_LINKS': (custom_links, 'General', {})
     'DO_NOT_OVERRIDE_GIT_BRANCH': (int, 'General', 0),
     'ENABLE_HTTPS': (int, 'General', 0),
     'EXPORT_DIR': (str, 'General', ''),
@@ -239,6 +311,7 @@ SETTINGS = [
     'CLOUDINARY_API_KEY',
     'CLOUDINARY_API_SECRET',
     'CLOUDINARY_CLOUD_NAME',
+    'CUSTOM_LINKS',
     'DATE_FORMAT',
     'EXPORT_DIR',
     'GIT_BRANCH',
@@ -701,3 +774,7 @@ class Config(object):
                 self.ANON_REDIRECT_DYNAMIC = 1
 
             self.CONFIG_VERSION = 22
+        if self.CONFIG_VERSION == 22:
+            if not self.CUSTOM_LINKS:
+                self.CUSTOM_LINKS = {}
+            self.CONFIG_VERSION = 23
