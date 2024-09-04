@@ -41,14 +41,14 @@ def bool_int(value):
 def custom_links(value):
     """
     Validates a dictionary of custom links.
-
+    text or icon is required
     ```python
     [General]
 
     [[CUSTOM_LINKS]]
       [[[link_id]]]
         friendly_name = Name            # Optional, friendly name of the link
-        text = My Link                  # Optional, text displayed next to icon
+        text = My Link                  # Required, text displayed next to icon
         text_color = 002244             # Optional, RGB HEX color for text
         icon = http://link-to-image.png # Required, Link to icon, SVG definition, raw base64
         icon_color = ff0000             # Optional, RGB HEX color for icon
@@ -59,10 +59,11 @@ def custom_links(value):
     ```
     """
     rgb_hex_pattern = re.compile(r"^[a-fA-F0-9]{6}$")
-    required_keys = ["icon", "href", "enabled", "location"]
-    bool_int_keys = ["enabled"]
+    required_keys = ["href", "active", "location"]
+    one_of_keys = ["text", "icon"]
+    bool_int_keys = ["active"]
     rgb_keys = ["text_color", "icon_color"]
-    optional_keys [*rgb_keys, "alt", "text", "friendly_name"]
+    optional_keys [*rgb_keys, "alt", "friendly_name"]
 
     def is_valid_url(url):
         try:
@@ -77,6 +78,14 @@ def custom_links(value):
             if k not in link_spec:
                 return None
             result[k] = link_spec[k]
+
+        found_one = False
+        for k in one_of_keys:
+            if k not in link_spec:
+                continue
+            result[k] = link_spec[k]
+        if not found_ond:
+            return None
 
         if not is_valid_url(link_spec["href"]):
             return None
