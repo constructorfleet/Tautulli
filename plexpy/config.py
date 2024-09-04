@@ -55,7 +55,7 @@ def custom_links(value):
         alt = Alt Text                  # Optional, alt-text for icon
         href = http://my/link/dest      # Required, link url
         active = 0                      # Required, flag to show/hide
-        location                        # Required, where the link should be displayed [nav, menu]
+        location = nav                  # Required, where the link should be displayed [nav, menu]
     ```
     """
     rgb_hex_pattern = re.compile(r"^[a-fA-F0-9]{6}$")
