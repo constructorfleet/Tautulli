@@ -47,6 +47,7 @@ import plexpy
 from plexpy import activity_pinger
 from plexpy import activity_processor
 from plexpy import common
+from plexpy import custom_links
 from plexpy import config
 from plexpy import database
 from plexpy import datafactory
@@ -6564,6 +6565,176 @@ class WebInterface(object):
     @requireAuth(member_of("admin"))
     def get_plexpy_url(self, **kwargs):
         return helpers.get_plexpy_url()
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    @requireAuth(member_of("admin"))
+    @addtoapi()
+    def get_custom_links(self, **kwargs):
+        """ Get a list of configured custom links.
+
+            ```
+            Required parameters:
+                None
+
+            Optional parameters:
+                None
+
+            Returns:
+                json:
+                    [{"id": 1,
+                      "location": "nav",
+                      "friendly_name": "My link name",
+                      "icon": "http://link.to/image.png",
+                      "icon_color": "002255",
+                      "text": "Click my link",
+                      "text_color": "1166ff",
+                      "alt": "Alternative text",
+                      "href": "http://my.link/dest",
+                      "active": 1
+                      }
+                     ]
+            ```
+        """
+        return custom_links.get_custom_links()
+
+    @cherrypy.expose
+    @requireAuth(member_of("admin"))
+    def get_custom_links_table(self, **kwargs):
+        return serve_template(template_name="custom_links_table.html", link_spec_list=self.get_custom_links)
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    @requireAuth(member_of("admin"))
+    @addtoapi()
+    def delete_custom_link(self, link_id=None, **kwargs):
+        """ Remove a custom link from the configuration.
+
+            ```
+            Required parameters:
+                link_id (int):        The custom link to delete
+
+            Optional parameters:
+                None
+
+            Returns:
+                result (string):        'success' or 'failure'
+                message (string):       User friendly message
+            ```
+        """
+        if custom_links.delete_custom_link(link_id=link_id)
+            return {'result': 'success', 'message': 'Custom link deleted successfully.'}
+
+        return {'result': 'failure', 'message': 'Provided link_id was not found'}
+        
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    @requireAuth(member_of("admin"))
+    @addtoapi()
+    def get_custom_link_config(self, link_id=None, **kwargs):
+        """ Get the configuration for an existing custom link.
+
+            ```
+            Required parameters:
+                link_id (int):        The custom link config to retrieve
+
+            Optional parameters:
+                None
+
+            Returns:
+                json:
+                    {
+                      "id": 1,
+                      "location": "nav",
+                      "friendly_name": "My link name",
+                      "icon": "http://link.to/image.png",
+                      "icon_color": "002255",
+                      "text": "Click my link",
+                      "text_color": "1166ff",
+                      "alt": "Alternative text",
+                      "href": "http://my.link/dest",
+                      "active": 1
+                    }
+            ```
+        """
+        return custom_links.get_custom_link(link_id=link_id)
+
+    @cherrypy.expose
+    @requireAuth(member_of("admin"))
+    def get_custom_link_config_modal(self, link_id=None, **kwargs):
+        return serve_template(template_name="custom_link_config.html", link_spec=self.get_custom_link_config(link_id))
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    @requireAuth(member_of("admin"))
+    @addtoapi()
+    def add_custom_link_config(self, href=None, icon=None, location=None, **kwargs):
+        """ Add a new custom link.
+
+            ```
+            Required parameters:
+                href (url):             The custom link url
+                icon (string):          The custom link icon (or text)
+                text (string):          The link text (or icon)
+                location (string):      The location for the link (nav, menu)
+
+            Optional parameters:
+                icon_color (string):    The HEX rgb color for the icon
+                text_color (string):    The HEX rgb color for the link text
+                friendly_name (string): A friendly name for the link
+                alt (string):           Alternative text
+                active (int):           1 for active, 0 for inactive
+
+            Returns:
+                result (string):        'success' or 'failure'
+                message (string):       User friendly message
+                link_id (string):       The id of the new link if created
+            ```
+        """
+        link_id = custom_links.add_custom_link(
+            href=href,
+            icon=icon,
+            location=location,
+            **kwargs
+        )
+
+        if link_id is None:
+            return return {'result': 'error', 'message': 'Failed to add custom link.'}
+        return {'result': 'success', 'message': 'Added custom link.', 'link_id': link_id}
+            
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    @requireAuth(member_of("admin"))
+    @addtoapi()
+    def set_custom_link_config(self, link_id=None, **kwargs):
+        """ Configure an existing custom link.
+
+            ```
+            Required parameters:
+                link_id (string):       The custom link config to update
+
+            Optional parameters:
+                href (url):             The custom link url
+                icon (string):          The custom link icon
+                location (string):      The location for the link (nav, menu)
+                icon_color (string):    The HEX rgb color for the icon
+                text (string):          The link text
+                text_color (string):    The HEX rgb color for the link text
+                friendly_name (string): A friendly name for the link
+                alt (string):           Alternative text
+                active (int):           1 for active, 0 for inactive
+
+            Returns:
+                result (string):        'success' or 'failure'
+                message (string):       User friendly message
+            ```
+        """
+        if not custom_links.update_custom_link(link_id=link_id, **kwargs):
+            return {'result': 'error', 'message': 'Failed to save custom link.'}
+        return {'result': 'error', 'message': 'Failed to save custom link.'}
+            
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
