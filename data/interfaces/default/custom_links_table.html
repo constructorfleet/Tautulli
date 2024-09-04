@@ -1,0 +1,42 @@
+<%doc>
+USAGE DOCUMENTATION :: PLEASE LEAVE THIS AT THE TOP OF THIS FILE
+
+For Mako templating syntax documentation please visit: http://docs.makotemplates.org/en/latest/
+
+Filename:           custom_nav_links_table.html
+Version:            0.1
+
+DOCUMENTATION :: END
+</%doc>
+
+<ul class="stacked-configs list-unstyled">
+    % for link_spec in sorted(link_spec_list, key=lambda k: (k['link_location'], k['friendly_name'], k['id'])):
+    <li class="custom-link pointer" data-id="${link_spec['id']}" data-loc="${link_spec['link_location']}"">
+        <span>
+            <span class="toggle-left trigger-tooltip ${'active' if link_spec['active'] else ''}" data-toggle="tooltip" data-placement="top" title="Link ${'shown' if link_spec['active'] else 'not shown'}"><i class="fa fa-lg fa-fw fa-link"></i></span>
+            % if link_spec['friendly_name']:
+            ${link_spec['link_location']} &nbsp;<span class="friendly_name">(${link_spec['id']} - ${link_spec['friendly_name']})</span>
+            % else:
+            ${link_spec['link_location']} &nbsp;<span class="friendly_name">(${link_spec['id']})</span>
+            % endif
+        </span>
+    </li>
+    % endfor
+    <li class="add-custom-link pointer" id="add-custom-link" data-target="#add-custom-link-modal" data-toggle="modal">
+        <span>
+            <span class="toggle-left"><i class="fa fa-lg fa-fw fa-link"></i></span> Add a new custom link
+            <span class="toggle-right"><i class="fa fa-lg fa-fw fa-plus"></i></span>
+        </span>
+    </li>
+</ul>
+
+<script>
+    // Load custom link config modal
+    $(".custom-link").click(function () {
+        var link_id = $(this).data('id');
+        var link_location = $(this).data('loc')
+        loadCustomLink(link_id, link_location);
+    });
+
+    $('.trigger-tooltip').tooltip();
+</script>
