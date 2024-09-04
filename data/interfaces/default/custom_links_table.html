@@ -10,14 +10,14 @@ DOCUMENTATION :: END
 </%doc>
 
 <ul class="stacked-configs list-unstyled">
-    % for link_spec in sorted(link_spec_list, key=lambda k: (k['link_location'], k['friendly_name'], k['id'])):
-    <li class="custom-link pointer" data-id="${link_spec['id']}" data-loc="${link_spec['link_location']}"">
+    % for link_spec in sorted(link_spec_list, key=lambda k: (k['location'], k['friendly_name'], k['id'])):
+    <li class="custom-link pointer" data-id="${link_spec['id']}" data-loc="${link_spec['location']}"">
         <span>
             <span class="toggle-left trigger-tooltip ${'active' if link_spec['active'] else ''}" data-toggle="tooltip" data-placement="top" title="Link ${'shown' if link_spec['active'] else 'not shown'}"><i class="fa fa-lg fa-fw fa-link"></i></span>
             % if link_spec['friendly_name']:
-            ${link_spec['link_location']} &nbsp;<span class="friendly_name">(${link_spec['id']} - ${link_spec['friendly_name']})</span>
+            ${link_spec['location']} &nbsp;<span class="friendly_name">(${link_spec['id']} - ${link_spec['friendly_name']})</span>
             % else:
-            ${link_spec['link_location']} &nbsp;<span class="friendly_name">(${link_spec['id']})</span>
+            ${link_spec['location']} &nbsp;<span class="friendly_name">(${link_spec['id']})</span>
             % endif
         </span>
     </li>
