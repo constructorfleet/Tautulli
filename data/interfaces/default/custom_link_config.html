@@ -1,0 +1,264 @@
+% if link_spec:
+<%
+    import json
+    from plexpy.helpers import checked
+
+    link_config_options = [
+        {
+            "key": "active",
+            "input_type": "checkbox",
+            "required": False,
+            "label": "Enable the custom link",
+            "description": "When checked the link will be displayed on the page, otherwise it will not."
+        },
+        {
+            "key": "location",
+            "input_type": "select",
+            "label": "Link Location",
+            "description": "Where this link will be displayed in the UI."
+            "required": True,
+            "select_options": {
+                "nav": "Navigation Bar",
+                "menu": "Main Menu"
+            ]
+        },
+        {
+            "key": "friendly_name",
+            "input_type": "text",
+            "required": False,
+            "label": "Name",
+            "description": "Name the link for easy reference later."
+        },
+        {
+            "key": "icon",
+            "input_type": "text",
+            "required": True,
+            "label": "Icon"
+            "description": "The icon for the link."
+        },
+        {
+            "key": "icon_color",
+            "input_type": "color",
+            "required": False,
+            "label": "Icon Color",
+            "description": "Color to tint the icon."
+        },
+        {
+            "key": "alt",
+            "input_type": "text",
+            "required": False,
+            "label": "Alternate Text",
+            "description": "If the icon cannot be displayed, this text will appear in it's place."
+        },
+        {
+            "key": "text",
+            "input_type": "text",
+            "required": False,
+            "label": "Text",
+            "description": "Text to display next to the icon."
+        },
+        {
+            "key": "text_color",
+            "input_type": "color",
+            "required": False,
+            "label": "Text Color",
+            "description": "Color to tint the link text."
+        },
+        
+    ]
+%>
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-remove"></i></button>
+            <h4 class="modal-title" id="custom-link-config-modal-header">Custom Link Settings &nbsp;<small><span class="custom_link_id">(Custom Link ID: ${link_spec['id']})</span></small></h4>
+        </div>
+        <div class="modal-body">
+            <div class="container-fluid">
+                <form action="set_custom_link_config" method="post" class="form" id="set_custom_link_config" data-parsley-validate>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <input type="hidden" id="custom_link_id" name="custom_link_id" value="${link_spec['id']}" />
+                            % for item in link_config_options:
+                            % if item['input_type'] == 'help':
+                            <div class="form-group">
+                                <label>${item['label']}</label>
+                                <p class="help-block">${item['description'] | n}</p>
+                            </div>
+                            % elif item['input_type'] == 'text' or item['input_type'] == 'password':
+                            <div class="form-group">
+                                <label for="${item['key']}">${item['label']}</label>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <input type="${item['key']}" class="form-control" id="${item['key']}" name="${item['key']}" value="${link_spec[item['key']]}" size="30" ${'readonly' if item.get('readonly') else ''}>
+                                    </div>
+                                </div>
+                                <p class="help-block">${item['description'] | n}</p>
+                            </div>
+                            % elif item['input_type'] == 'checkbox':
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" data-id="${item['key']}" class="checkboxes" value="1" ${checked(link_spec[item['key']])}> ${item['label']}
+                                </label>
+                                <p class="help-block">${item['description'] | n}</p>
+                            </div>
+                            % elif item['input_type'] == 'select':
+                            <div class="form-group">
+                                <label for="${item['key']}">${item['label']}</label>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <select class="form-control" id="${item['key']}" name="${item['key']}">
+                                            % for key, value in sorted(item['select_options'].items()):
+                                            % if isinstance(value, list):
+                                            <optgroup label="${key}">
+                                                % for option in sorted(value, key=lambda x: x['text'].lower()):
+                                                    <option value="${option['value']}" ${'selected' if option['value'] == link_spec[item['key']] else ''}>${option['text']}</option>
+                                                % endfor
+                                            </optgroup>
+                                            % else:
+                                            <option value="${key}" ${'selected' if key == link_spec[item['key']] else ''}>${value}</option>
+                                            % endif
+                                            % endfor
+                                        </select>
+                                    </div>
+                                </div>
+                                <p class="help-block">${item['description'] | n}</p>
+                            </div>
+                            % endif
+                            % endfor
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <input type="button" id="delete-custom-link-item" class="btn btn-danger btn-edit" style="float:left;" value="Delete">
+            <input type="button" id="duplicate-custom-link-item" class="btn btn-dark btn-edit" style="float:left;" value="Duplicate">
+            <input type="button" id="save-custom-link-item" class="btn btn-bright" value="Save">
+        </div>
+    </div>
+</div>
+
+<script src="${http_root}js/filterer.jquery.js"></script>
+<script>
+
+    $('#custom-link-config-modal').unbind('hidden.bs.modal');
+
+    function reloadModal() {
+        $.ajax({
+            url: 'get_custom_link_config_modal',
+            data: { link_id: '${link_spec["id"]}' },
+            cache: false,
+            async: true,
+            complete: function (xhr, status) {
+                $('#custom-link-config-modal').html(xhr.responseText);
+            }
+        });
+    }
+
+    function saveCallback(jqXHR) {
+        if (jqXHR) {
+            var result = $.parseJSON(jqXHR.responseText);
+            var msg = result.message;
+            if (result.result === 'success') {
+                showMsg('<i class="fa fa-check"></i> ' + msg, false, true, 5000)
+            } else {
+                showMsg('<i class="fa fa-times"></i> ' + msg, false, true, 5000, true)
+            }
+        }
+
+        getCustomLinksTable();
+    }
+
+    function deleteCallback() {
+        $('#custom-link-config-modal').modal('hide');
+        getCustomLinksTable();
+    }
+
+    function duplicateCallback(result) {
+        // Set new notifier id
+        $('#custom_link_id').val(result.link_id);
+        // Clear friendly name
+        $('#friendly_name').val("");
+
+        saveCustomLink();
+
+        $('#custom-link-config-modal').on('hidden.bs.modal', function () {
+            loadCustomLinkConfig(result.link_id);
+        });
+        $('#custom-link-config-modal').modal('hide');
+    }
+
+    function saveNotifier() {
+        // Trim all text inputs before saving
+        $('input[type=text]').val(function(_, value) {
+            return $.trim(value);
+        });
+        if (validateLogic()) {
+            // Reload modal to update certain fields
+            doAjaxCall('set_custom_link_config', $(this), 'tabs', true, true, saveCallback);
+        }
+    }
+
+    $('#delete-custom-link-item').click(function () {
+        var msg = 'Are you sure you want to delete this <strong>${link_spec["location"]}</strong> link?';
+        var url = 'delete_custom_link';
+        confirmAjaxCall(url, msg, { link_id: '${link_spec["id"]}' }, null, deleteCallback);
+    });
+
+    $('#duplicate-custom-link-item').click(function() {
+        var msg = 'Are you sure you want to duplicate this <strong>${link_spec["location"]}</strong> link?';
+        var url = 'add_custom_link_config';
+        confirmAjaxCall(url, msg, { link_id: '${link_spec["id"]}' }, null, duplicateCallback);
+    });
+
+    $('#save-custom-link-item').click(function () {
+        saveCustomLink();
+    });
+
+    function validateLogic() {
+        // TODO
+
+        try {
+            $('#custom_conditions_logic_error').hide();
+            return true;
+        } catch (e) {
+            $('#custom_conditions_logic_error span').text(e);
+            $('#custom_conditions_logic_error').show();
+            showMsg('<i class="fa fa-times"></i> Failed to save custom link.', false, true, 5000, true);
+        }
+    }
+
+    $("${', '.join(['#' + c['key'] for c in link_config_options if c.get('refresh')])}").on('change', function () {
+        // Reload modal to update certain fields
+        doAjaxCall('set_custom_link_config', $(this), 'tabs', true, false, reloadModal);
+        return false;
+    });
+
+    // Never send checkbox values directly, always substitute value in hidden input.
+    $('.checkboxes').click(function () {
+        var configToggle = $(this).data('id');
+        if ($(this).is(':checked')) {
+            $('#'+configToggle).val(1);
+        } else {
+            $('#'+configToggle).val(0);
+        }
+    });
+</script>
+% else:
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-remove"></i></button>
+            <h4 class="modal-title" id="custom-link-config-modal-header">Error</h4>
+        </div>
+        <div class="modal-body" style="text-align: center">
+            <strong>
+                <i class="fa fa-exclamation-circle"></i> Failed to retrieve custom link configuration. Check the <a href="logs">logs</a> for more info.
+            </strong>
+        </div>
+        <div class="modal-footer">
+        </div>
+    </div>
+</div>
+% endif
