@@ -1075,6 +1075,31 @@ class Libraries(object):
 
         return libraries
 
+    def get_section_counts(self):
+        """Returns cached item counts per section. Avoids a PMS round trip.
+
+        Counts are only as fresh as the last refresh_libraries() run.
+        """
+        monitor_db = database.MonitorDatabase()
+
+        try:
+            query = "SELECT section_id, section_name, section_type, " \
+                    "count, parent_count, child_count " \
+                    "FROM library_sections " \
+                    "WHERE deleted_section = 0 AND is_active = 1"
+            result = monitor_db.select(query=query)
+        except Exception as e:
+            logger.warn("Tautulli Libraries :: Unable to execute database query for get_section_counts: %s." % e)
+            return []
+
+        return [{'section_id': item['section_id'],
+                 'section_name': item['section_name'],
+                 'section_type': item['section_type'],
+                 'count': item['count'],
+                 'parent_count': item['parent_count'],
+                 'child_count': item['child_count']
+                 } for item in result]
+
     def delete(self, server_id=None, section_id=None, row_ids=None, purge_only=False):
         monitor_db = database.MonitorDatabase()
 

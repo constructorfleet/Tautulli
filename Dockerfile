@@ -25,4 +25,6 @@ CMD [ "python", "Tautulli.py", "--datadir", "/config" ]
 ENTRYPOINT [ "./start.sh" ]
 
 EXPOSE 8181
+# Prometheus metrics, only served when prometheus_enabled is set
+EXPOSE 9595
 HEALTHCHECK --start-period=90s CMD curl -ILfks https://localhost:8181/status > /dev/null || curl -ILfs http://localhost:8181/status > /dev/null || exit 1
