@@ -5,6 +5,7 @@ __pycache__
 *.pyc
 *.py~
 *.pyproj
+.pytest_cache
 *.sln
 
 # PlexPy files #
@@ -13,6 +14,7 @@ __pycache__
 *.db*
 *.db-journal
 *.ini
+!pytest.ini
 release.lock
 version.lock
 lib/*.dist-info

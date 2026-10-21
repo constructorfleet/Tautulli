@@ -1,0 +1,26 @@
+name: Tests
+
+on:
+  push:
+    branches: [master, beta, nightly]
+  pull_request:
+    branches: [master, beta, nightly]
+
+jobs:
+  pytest:
+    name: Pytest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set Up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install Test Dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run Tests
+        run: pytest
