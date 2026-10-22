@@ -77,7 +77,6 @@ _STREAM_STAT_LABELS = ['type', 'server']
 _LIBRARY_LABELS = ['type', 'server', 'section_name', 'section_type']
 
 _SERVER = None
-_THREAD = None
 _LOCK = threading.Lock()
 
 
@@ -349,7 +348,7 @@ def _player_state(state):
 
 
 def start():
-    global _SERVER, _THREAD
+    global _SERVER
 
     if not plexpy.CONFIG.PROMETHEUS_ENABLED:
         return
@@ -376,18 +375,19 @@ def start():
         registry.register(TautulliCollector())
 
         try:
-            _SERVER, _THREAD = start_wsgi_server(port, addr=host, registry=registry)
+            # The serving thread is a daemon; it needs no handle of its own.
+            _SERVER, _ = start_wsgi_server(port, addr=host, registry=registry)
         except Exception as e:
             logger.error("Tautulli Prometheus :: Failed to start metrics endpoint on %s:%d: %s",
                          host, port, e)
-            _SERVER = _THREAD = None
+            _SERVER = None
             return
 
         logger.info("Tautulli Prometheus :: Metrics endpoint started on http://%s:%d/metrics", host, port)
 
 
 def stop():
-    global _SERVER, _THREAD
+    global _SERVER
 
     with _LOCK:
         if _SERVER is None:
@@ -400,7 +400,7 @@ def stop():
         except Exception as e:
             logger.warn("Tautulli Prometheus :: Error while stopping metrics endpoint: %s", e)
 
-        _SERVER = _THREAD = None
+        _SERVER = None
 
 
 def restart():
