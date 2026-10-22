@@ -8,6 +8,9 @@ jobs:
   check-branch:
     name: Check Pull Request
     runs-on: ubuntu-latest
+    # Upstream takes PRs on nightly only. This fork has no nightly branch, so
+    # the check would fail on every PR here.
+    if: github.repository == 'Tautulli/Tautulli'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7

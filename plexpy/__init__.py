@@ -50,6 +50,7 @@ from plexpy import notification_handler
 from plexpy import notifiers
 from plexpy import plex
 from plexpy import plextv
+from plexpy import prometheus
 from plexpy import users
 from plexpy import versioncheck
 from plexpy import web_socket
@@ -553,6 +554,9 @@ def start():
 
         # Cancel processing exports
         exporter.cancel_exports()
+
+        # Start the Prometheus metrics endpoint on its own port
+        prometheus.start()
 
         if CONFIG.FIRST_RUN_COMPLETE:
             run_analytics()
@@ -2923,6 +2927,7 @@ def upgrade():
 
 def shutdown(restart=False, update=False, checkout=False, reset=False):
     webstart.stop()
+    prometheus.stop()
 
     # Shutdown the websocket connection
     if WEBSOCKET:

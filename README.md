@@ -21,6 +21,7 @@ and [PlexWatchWeb](https://github.com/ecleese/plexWatchWeb).
 -   Rich analytics presented using Highcharts graphing.
 -   Beautiful content information pages.
 -   Full sync list data on all users syncing items from your library.
+-   Optional Prometheus metrics endpoint on a dedicated port.
 -   And many more!!
 
 ## Preview
@@ -75,6 +76,85 @@ Read the [Installation Guides][Installation] for instructions on how to install 
 [badge-installer-beta-macos]: https://img.shields.io/github/v/release/Tautulli/Tautulli?label=macos&include_prereleases&style=flat-square
 [badge-installer-beta-ci]: https://img.shields.io/github/actions/workflow/status/Tautulli/Tautulli/.github/workflows/publish-installers.yml?style=flat-square&branch=beta
 [badge-installer-nightly-ci]: https://img.shields.io/github/actions/workflow/status/Tautulli/Tautulli/.github/workflows/publish-installers.yml?style=flat-square&branch=nightly
+
+## Prometheus Metrics
+
+Tautulli can serve a Prometheus endpoint on its own port, replacing a separate
+[Varken](https://github.com/Boerderij/Varken) deployment. Disabled by default;
+enable it in the `[Prometheus]` section of `config.ini` and restart Tautulli:
+
+```ini
+[Prometheus]
+prometheus_enabled = 1
+prometheus_host = 0.0.0.0
+prometheus_port = 9595
+prometheus_metric_prefix = tautulli
+prometheus_server_label =
+prometheus_geoip_lookup = 0
+prometheus_cache_seconds = 5
+prometheus_library_cache_seconds = 300
+```
+
+Every option also accepts an environment variable override, e.g.
+`TAUTULLI_PROMETHEUS_ENABLED=1`. Scrape the endpoint at:
+
+```text
+http://<prometheus_host>:<prometheus_port>/metrics
+```
+
+| Option | Description |
+| --- | --- |
+| `prometheus_metric_prefix` | Prepended to every metric name. Set to `varken_tautulli` for drop-in Varken compatibility. |
+| `prometheus_server_label` | Value of the `server` label. Defaults to `pms_name`. |
+| `prometheus_geoip_lookup` | Resolve client public IPs to city/region/coordinates via plex.tv. Results are cached for 24 hours. |
+| `prometheus_cache_seconds` | Minimum age before activity is re-read from the Plex Media Server. |
+| `prometheus_library_cache_seconds` | Minimum age before library counts are re-read from Tautulli's database. |
+
+### Metrics
+
+Metrics are generated at scrape time. `<prefix>` below is
+`prometheus_metric_prefix`.
+
+| Metric | Labels | Description |
+| --- | --- | --- |
+| `<prefix>_stream_count` | `type`, `server` | Active streams. |
+| `<prefix>_transcode_streams` | `type`, `server` | Streams being transcoded. |
+| `<prefix>_direct_play_streams` | `type`, `server` | Streams playing directly. |
+| `<prefix>_direct_streams` | `type`, `server` | Streams being direct streamed. |
+| `<prefix>_total_bandwidth` | `type`, `server` | Reserved bandwidth in kbps. |
+| `<prefix>_lan_bandwidth` | `type`, `server` | Reserved LAN bandwidth in kbps. |
+| `<prefix>_wan_bandwidth` | `type`, `server` | Reserved WAN bandwidth in kbps. |
+| `<prefix>_hash` | 30 session labels | One series per active stream, always valued `1`. |
+| `<prefix>_total` | `type`, `server`, `section_name`, `section_type` | Items in a library. |
+| `<prefix>_seasons`, `<prefix>_episodes` | as above | Show libraries only. |
+| `<prefix>_artists`, `<prefix>_albums`, `<prefix>_tracks` | as above | Music libraries only. |
+
+### Varken compatibility
+
+Metric suffixes and label names are copied from Varken, so setting
+`prometheus_metric_prefix = varken_tautulli` keeps existing Grafana dashboards
+working. A few names are odd as a result:
+
+-   `<prefix>_hash` is an info metric. Varken wrote an MD5 digest into this
+    field. An MD5 is not a float, so its exporter always emitted `1`.
+-   `<prefix>_total` is a library item count. Only the `type` label separates
+    it from the stream stats.
+-   Session labels carry all the stream details, so these series have high
+    cardinality. They are mainly useful for Grafana table panels.
+-   `region_code` holds a country code. Varken read a subdivision ISO code from
+    a local MaxMind database; plex.tv does not expose one.
+
+Library counts come from Tautulli's own database instead of a live Plex Media
+Server query, so they are only as fresh as the last
+`refresh_libraries_interval` run.
+
+When the Plex Media Server cannot be reached, the endpoint returns HTTP 500 and
+`up` drops to 0. You get a gap in Grafana, which is what Varken gave you during
+an outage. Exporting zero streams would look like an idle server.
+
+> **Note**
+> The endpoint has no authentication and session labels include usernames, IP
+> addresses and media titles. Bind it to a trusted interface.
 
 ## Support
 
