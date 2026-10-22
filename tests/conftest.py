@@ -12,7 +12,9 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, 'lib'))
 
 import plexpy  # noqa: E402
-from plexpy import config  # noqa: E402
+import plexpy.config  # noqa: E402
+import plexpy.plextv  # noqa: E402
+import plexpy.pmsconnect  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -22,8 +24,6 @@ def no_outbound_calls(monkeypatch):
     The attempt list is checked after the test because _lookup_geoip()
     swallows every exception, which would otherwise hide the mistake.
     """
-    from plexpy import plextv, pmsconnect
-
     attempts = []
 
     def forbidden(name):
@@ -32,8 +32,8 @@ def no_outbound_calls(monkeypatch):
             raise AssertionError('test tried to reach {}; inject a fake instead'.format(name))
         return _raise
 
-    monkeypatch.setattr(plextv, 'PlexTV', forbidden('plex.tv'))
-    monkeypatch.setattr(pmsconnect, 'PmsConnect', forbidden('the Plex Media Server'))
+    monkeypatch.setattr(plexpy.plextv, 'PlexTV', forbidden('plex.tv'))
+    monkeypatch.setattr(plexpy.pmsconnect, 'PmsConnect', forbidden('the Plex Media Server'))
 
     yield
 
@@ -53,7 +53,7 @@ def unused_port():
 @pytest.fixture
 def tautulli_config(tmp_path, monkeypatch):
     """Installs a real Config backed by a throwaway ini file."""
-    cfg = config.Config(str(tmp_path / 'config.ini'))
+    cfg = plexpy.config.Config(str(tmp_path / 'config.ini'))
     cfg.PMS_NAME = 'Winterfell'
     monkeypatch.setattr(plexpy, 'CONFIG', cfg)
     monkeypatch.setattr(plexpy, 'HTTP_PORT', 8181)
